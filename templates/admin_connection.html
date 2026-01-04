@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">SQL Server Connecties</h2>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" action="/beheer/connection" class="row gy-2 gx-3 align-items-center">
+      <div class="col-auto">
+        <label class="form-label mb-0">Project</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select" name="project" onchange="this.form.submit()">
+          {% for val, label in projects %}
+            <option value="{{ val }}" {% if sel_project == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label mb-0">Profiel</label>
+      </div>
+      <div class="col-auto">
+        <select class="form-select" name="id" onchange="this.form.submit()">
+          {% for val, label in profiles %}
+            <option value="{{ val }}" {% if sel_id and sel_id|string == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto"><noscript><button class="btn btn-primary" type="submit">Kies</button></noscript></div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <form method="post" action="/beheer/connection">
+    <input type="hidden" name="action" value="new">
+    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-plus-circle"></i> Nieuw profiel</button>
+  </form>
+  <form method="post" action="/beheer/connection" onsubmit="return confirm('Profiel verwijderen?');">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="id" value="{{ sel_id }}">
+    <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Verwijderen</button>
+  </form>
+  <form method="post" action="/beheer/connection/test">
+    <input type="hidden" name="profile_id" value="{{ sel_id }}">
+    <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-plug"></i> Test connectie</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">Profiel bewerken</div>
+  <div class="card-body">
+    <form method="post" action="/beheer/connection" class="row g-3">
+      <input type="hidden" name="action" value="save">
+      <input type="hidden" name="id" value="{{ sel_id }}">
+      {{ form.hidden_tag() }}
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.name.label }}</label>
+        {{ form.name(class="form-control", size=32) }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.project.label }}</label>
+        {{ form.project(class="form-control", size=32, value=sel_project) }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.host.label }}</label>
+        {{ form.host(class="form-control", size=32) }}
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">{{ form.port.label }}</label>
+        {{ form.port(class="form-control", size=10) }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">{{ form.database.label }}</label>
+        {{ form.database(class="form-control", size=32) }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.username.label }}</label>
+        {{ form.username(class="form-control", size=24) }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">{{ form.password.label }}</label>
+        {{ form.password(class="form-control", size=24) }}
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">{{ form.odbc_driver.label }}</label>
+        {{ form.odbc_driver(class="form-control", size=40) }}
+      </div>
+      <div class="col-md-6 d-flex align-items-center">
+        <div class="form-check mt-3">
+          {{ form.trust_server_cert(class="form-check-input", id="trustCert") }}
+          <label class="form-check-label" for="trustCert">{{ form.trust_server_cert.label.text }}</label>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Opslaan</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

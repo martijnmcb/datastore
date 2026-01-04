@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+  <div class="col-md-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title text-center mb-4">Inloggen</h3>
+
+        {% with messages = get_flashed_messages(category_filter=['danger']) %}
+          {% if messages %}
+            <div class="alert alert-danger" role="alert">{{ messages[0] }}</div>
+          {% endif %}
+        {% endwith %}
+        {% if error %}
+          <div class="alert alert-danger" role="alert">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('auth.login') }}">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label for="username" class="form-label">Gebruikersnaam</label>
+            {{ form.username(class="form-control", id="username") }}
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Wachtwoord</label>
+            {{ form.password(class="form-control", id="password") }}
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Inloggen</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

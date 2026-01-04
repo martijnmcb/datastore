@@ -1,0 +1,14 @@
+Flask
+Flask-Login
+Flask-WTF
+email-validator
+Flask-Migrate
+Flask-SQLAlchemy
+SQLAlchemy
+python-dotenv
+passlib
+pyodbc
+pytest
+gunicorn
+waitress
+openpyxl

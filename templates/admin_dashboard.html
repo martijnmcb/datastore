@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-actions">
+  <div class="admin-actions__intro">
+    <h1 class="admin-actions__title">Beheer</h1>
+    <p class="admin-actions__lead">Kies een onderdeel om gebruikers, projecten en connecties te onderhouden.</p>
+  </div>
+  <div class="admin-actions__grid">
+    <a class="admin-actions__card" href="/beheer/users">
+      <div class="admin-actions__icon" aria-hidden="true">
+        <i class="bi bi-people"></i>
+      </div>
+      <h2 class="admin-actions__card-title">Gebruikersbeheer</h2>
+      <p class="admin-actions__card-text">Voeg nieuwe gebruikers toe, beheer rollen en wijs projecten toe.</p>
+    </a>
+    <a class="admin-actions__card" href="/beheer/connection">
+      <div class="admin-actions__icon" aria-hidden="true">
+        <i class="bi bi-hdd-network"></i>
+      </div>
+      <h2 class="admin-actions__card-title">SQL Connecties</h2>
+      <p class="admin-actions__card-text">Stel databaseprofielen in voor elk project en test verbindingen.</p>
+    </a>
+  </div>
+</div>
+{% endblock %}

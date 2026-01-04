@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="mb-0">Gebruikers</h2>
+</div>
+{% if edit_id %}
+  <p class="text-muted"><em>Je bewerkt nu gebruiker #{{ edit_id }} — pas de velden aan en sla op.</em></p>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-5">
+    <div class="card">
+      <div class="card-header">{{ 'Bewerken' if edit_id else 'Nieuwe gebruiker' }}</div>
+      <div class="card-body">
+        <form method="post" action="{% if edit_id %}/beheer/users/{{ edit_id }}/edit{% else %}/beheer/users{% endif %}">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label">{{ form.first_name.label }}</label>
+            {{ form.first_name(class="form-control", size=32) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.last_name.label }}</label>
+            {{ form.last_name(class="form-control", size=32) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.email.label }}</label>
+            {{ form.email(class="form-control", size=40) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.phone.label }}</label>
+            {{ form.phone(class="form-control", size=24) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.username.label }}</label>
+            {{ form.username(class="form-control", size=24) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.password.label }}</label>
+            {{ form.password(class="form-control", size=24) }}
+            <div class="form-text">Laat leeg om wachtwoord ongewijzigd te laten bij bewerken.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.role.label }}</label>
+            {{ form.role(class="form-select") }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">{{ form.projects.label }}</label>
+            {{ form.projects(class="form-select", size=5) }}
+            <div class="form-text">Selecteer één of meerdere projecten waarvoor de gebruiker toegang heeft.</div>
+          </div>
+          <div class="form-check mb-3">
+            {{ form.is_active(class="form-check-input", id="isActive") }}
+            <label class="form-check-label" for="isActive">{{ form.is_active.label.text }}</label>
+          </div>
+          <button type="submit" class="btn btn-primary">{{ 'Opslaan' if edit_id else 'Aanmaken' }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-7">
+    <div class="card">
+      <div class="card-header">Overzicht</div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Naam</th>
+                <th>User</th>
+                <th>Rollen</th>
+                <th>Projecten</th>
+                <th>Actief</th>
+                <th class="text-end">Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+              <tr>
+                <td>{{ u.id }}</td>
+                <td>{{ u.first_name }} {{ u.last_name }}</td>
+                <td>{{ u.username }}</td>
+                <td>
+                  {% for r in u.roles %}
+                    <span class="badge text-bg-secondary me-1">{{ r.name }}</span>
+                  {% endfor %}
+                </td>
+                <td>
+                  {% if u.project_links %}
+                    {% for project_name in u.project_names %}
+                      <span class="badge text-bg-info me-1">{{ project_name }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <span class="badge text-bg-secondary">Geen</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if u.is_active %}
+                    <span class="badge text-bg-success">Ja</span>
+                  {% else %}
+                    <span class="badge text-bg-secondary">Nee</span>
+                  {% endif %}
+                </td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary" href="/beheer/users/{{u.id}}/edit"><i class="bi bi-pencil"></i> Bewerken</a>
+                  <form method="post" action="/beheer/users/{{u.id}}/delete" class="d-inline" onsubmit="return confirm('Weet je zeker dat je deze gebruiker wilt verwijderen?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Verwijderen</button>
+                  </form>
+                  <form method="post" action="/beheer/users/{{u.id}}/toggle" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                      {% if u.is_active %}<i class="bi bi-person-dash"></i> Deactiveer{% else %}<i class="bi bi-person-check"></i> Activeer{% endif %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

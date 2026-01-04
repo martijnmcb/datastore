@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gebruikers</h2>
+
+<form method="post">
+  {{ form.hidden_tag() }}
+  <p>{{ form.first_name.label }}<br>{{ form.first_name(size=32) }}</p>
+  <p>{{ form.last_name.label }}<br>{{ form.last_name(size=32) }}</p>
+  <p>{{ form.email.label }}<br>{{ form.email(size=40) }}</p>
+  <p>{{ form.phone.label }}<br>{{ form.phone(size=24) }}</p>
+  <p>{{ form.username.label }}<br>{{ form.username(size=24) }}</p>
+  <p>{{ form.password.label }}<br>{{ form.password(size=24) }}</p>
+  <p>{{ form.role.label }}<br>{{ form.role() }}</p>
+  <p>{{ form.is_active.label }} {{ form.is_active() }}</p>
+  <button type="submit">Aanmaken</button>
+</form>
+
+<hr>
+<table border="1" cellpadding="6" cellspacing="0">
+  <tr><th>ID</th><th>Naam</th><th>Gebruikersnaam</th><th>Rollen</th><th>Actief</th><th>Actie</th></tr>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.id }}</td>
+    <td>{{ u.first_name }} {{ u.last_name }}</td>
+    <td>{{ u.username }}</td>
+    <td>{{ ', '.join([r.name for r in u.roles]) }}</td>
+    <td>{{ 'Ja' if u.is_active else 'Nee' }}</td>
+    <td>
+      <form method="post" action="/beheer/users/{{u.id}}/toggle">
+        <button type="submit">{{ 'Deactivate' if u.is_active else 'Activate' }}</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

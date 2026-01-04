@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>{{ 'Nieuw rapport' if mode == 'new' else 'Bewerk rapport' }}</h3>
+<form method="post" class="mt-3">
+  <div class="mb-3">
+    <label class="form-label">Naam</label>
+    <input type="text" class="form-control" name="name" value="{{ name or '' }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Dataset</label>
+    <select class="form-select" name="dataset">
+      <option value="rgritten" {% if dataset=='rgritten' %}selected{% endif %}>rgritten</option>
+    </select>
+  </div>
+
+  <div class="d-flex gap-2 mb-2">
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="btn-clear-all">Deselecteer alle velden</button>
+    <button class="btn btn-sm btn-outline-secondary" type="button" id="btn-clear-sorts">Reset sortering</button>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>Veld</th>
+          <th>Output</th>
+          <th>Filter</th>
+          <th>Group by</th>
+          <th>Sort</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for f in fields %}
+        <tr>
+          <td>{{ f }}</td>
+          <td><input type="checkbox" name="include_{{ f }}" value="1" {% if f in include_set %}checked{% endif %}></td>
+          <td class="filter-cell" data-kind="{{ field_kinds.get(f) }}" data-field="{{ f }}">
+            <input type="checkbox" name="filter_{{ f }}" value="1" {% if f in filter_set %}checked{% endif %}>
+            <div class="mt-1">
+              <div class="d-flex gap-1">
+                {% set op = filter_map.get(f, {}).get('op') if filter_map else None %}
+                <select class="form-select form-select-sm filter-op" name="filter_op_{{ f }}">
+                  <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
+                  <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
+                  <option value="like" {% if op == 'like' %}selected{% endif %}>like</option>
+                  <option value="not_like" {% if op == 'not_like' %}selected{% endif %}>not like</option>
+                  <option value=">" {% if op == '>' %}selected{% endif %}>&gt;</option>
+                  <option value=">=" {% if op == '>=' %}selected{% endif %}>&ge;</option>
+                  <option value="<" {% if op == '<' %}selected{% endif %}>&lt;</option>
+                  <option value="<=" {% if op == '<=' %}selected{% endif %}>&le;</option>
+                  {% if field_kinds.get(f) == 'date' %}
+                  <option value="between" {% if op == 'between' %}selected{% endif %}>between</option>
+                  {% endif %}
+                  <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
+                  <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>is not null</option>
+                </select>
+              </div>
+              {% set kind = field_kinds.get(f) %}
+              {% set valpair = (filter_map.get(f, {}).get('value','') if filter_map else '') %}
+              {% set parts = valpair.split(',') %}
+              <div class="mt-1 filter-single" {% if kind=='date' and op=='between' %}style="display:none"{% endif %}>
+                <input type="{{ 'date' if kind == 'date' else ('time' if kind == 'time' else 'text') }}" class="form-control form-control-sm" name="filter_val_{{ f }}" value="{{ filter_map.get(f, {}).get('value','') if filter_map else '' }}" placeholder="waarde{% if kind == 'date' %} / yyyy-mm-dd{% elif kind == 'time' %} / hh:mm[:ss]{% endif %}">
+              </div>
+              {% if kind == 'date' %}
+              <div class="d-flex gap-1 mt-1 filter-between" {% if not (kind=='date' and op=='between') %}style="display:none"{% endif %}>
+                <input type="date" class="form-control form-control-sm" name="filter_val_start_{{ f }}" value="{{ parts[0] if parts|length>0 else '' }}" placeholder="start">
+                <input type="date" class="form-control form-control-sm" name="filter_val_end_{{ f }}" value="{{ parts[1] if parts|length>1 else '' }}" placeholder="eind">
+              </div>
+              {% endif %}
+            </div>
+          </td>
+          <td><input type="checkbox" name="group_{{ f }}" value="1" {% if f in group_set %}checked{% endif %}></td>
+          <td>
+            <select class="form-select form-select-sm" name="sort_{{ f }}">
+              <option value="">-</option>
+              <option value="asc" {% if sort_map.get(f)=='asc' %}selected{% endif %}>Asc</option>
+              <option value="desc" {% if sort_map.get(f)=='desc' %}selected{% endif %}>Desc</option>
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button class="btn btn-primary">Opslaan</button>
+  <a class="btn btn-secondary" href="{{ url_for('reports.list_reports') }}">Annuleer</a>
+</form>
+
+<script>
+  (function(){
+    const clearAllBtn = document.getElementById('btn-clear-all');
+    const clearSortBtn = document.getElementById('btn-clear-sorts');
+    function qsAll(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+    if (clearAllBtn){
+      clearAllBtn.addEventListener('click', function(){
+        qsAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+      });
+    }
+    if (clearSortBtn){
+      clearSortBtn.addEventListener('click', function(){
+        qsAll('select[name^=\"sort_\"]').forEach(sel => sel.value = '');
+      });
+    }
+  })();
+</script>
+{% endblock %}
