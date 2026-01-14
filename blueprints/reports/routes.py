@@ -7,6 +7,8 @@ from extensions import db
 from models import RGRit, ReportTemplate
 from . import bp
 
+DEFAULT_REPORT_ROW_LIMIT = 1000
+
 
 def _dataset_fields(dataset):
     if dataset == "rgritten":
@@ -72,6 +74,15 @@ def _calc_value(field, row):
     return None
 
 
+def _format_value(field, row):
+    val = getattr(row, field, None)
+    if val is None:
+        return ""
+    if field == "ritdatum" and hasattr(val, "date"):
+        return val.date().isoformat()
+    return val
+
+
 def _parse_form(fields, dataset):
     include_fields = [f for f in fields if request.form.get(f"include_{f}") == "1"]
     filter_fields = []
@@ -111,9 +122,25 @@ def new_report():
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
+        row_limit = request.form.get("row_limit", type=int)
+        if not row_limit or row_limit < 1:
+            row_limit = DEFAULT_REPORT_ROW_LIMIT
         if not name:
             flash("Geef een rapportnaam op", "warning")
-            return render_template("reports_form.html", dataset=dataset, fields=fields)
+            return render_template(
+                "reports_form.html",
+                dataset=dataset,
+                fields=fields,
+                field_kinds=field_kinds,
+                name=name,
+                row_limit=row_limit,
+                include_set=set(),
+                filter_set=set(),
+                filter_map={},
+                group_set=set(),
+                sort_map={},
+                mode="new",
+            )
 
         include_fields, filter_fields, group_fields, sort_fields = _parse_form(fields, dataset)
         if not include_fields:
@@ -124,6 +151,7 @@ def new_report():
                 fields=fields,
                 field_kinds=field_kinds,
                 name=name,
+                row_limit=row_limit,
                 include_set=set(include_fields),
                 filter_set={f["field"] for f in filter_fields},
                 filter_map={f["field"]: f for f in filter_fields},
@@ -135,6 +163,7 @@ def new_report():
         tmpl = ReportTemplate(
             name=name,
             dataset=dataset,
+            row_limit=row_limit,
             include_fields=include_fields,
             filter_fields=filter_fields,
             group_fields=group_fields,
@@ -151,6 +180,7 @@ def new_report():
         fields=fields,
         field_kinds=field_kinds,
         name="",
+        row_limit=DEFAULT_REPORT_ROW_LIMIT,
         include_set=set(),
         filter_set=set(),
         filter_map={},
@@ -170,9 +200,13 @@ def edit_report(template_id):
     dataset = tmpl.dataset
     fields = _dataset_fields(dataset)
     field_kinds = {f: _field_kind(dataset, f) for f in fields}
+    current_limit = tmpl.row_limit or DEFAULT_REPORT_ROW_LIMIT
 
     if request.method == "POST":
         name = (request.form.get("name") or "").strip()
+        row_limit = request.form.get("row_limit", type=int)
+        if not row_limit or row_limit < 1:
+            row_limit = DEFAULT_REPORT_ROW_LIMIT
         include_fields, filter_fields, group_fields, sort_fields = _parse_form(fields, dataset)
         if not name:
             flash("Geef een rapportnaam op", "warning")
@@ -180,6 +214,7 @@ def edit_report(template_id):
             flash("Kies minimaal één veld om op te nemen", "warning")
         else:
             tmpl.name = name
+            tmpl.row_limit = row_limit
             tmpl.include_fields = include_fields
             tmpl.filter_fields = filter_fields
             tmpl.group_fields = group_fields
@@ -187,6 +222,8 @@ def edit_report(template_id):
             db.session.commit()
             flash("Template bijgewerkt", "success")
             return redirect(url_for("reports.list_reports"))
+    else:
+        row_limit = current_limit
 
     return render_template(
         "reports_form.html",
@@ -194,6 +231,7 @@ def edit_report(template_id):
         fields=fields,
         field_kinds=field_kinds,
         name=tmpl.name,
+        row_limit=row_limit,
         include_set=set(tmpl.include_fields or []),
         filter_set={f["field"] for f in tmpl.filter_fields or [] if isinstance(f, dict)},
         filter_map={f["field"]: f for f in tmpl.filter_fields or [] if isinstance(f, dict)},
@@ -441,8 +479,12 @@ def run_report(template_id):
     query = _apply_filters(query, tmpl.dataset, tmpl)
     query = _apply_sort(query, tmpl.dataset, tmpl)
 
+    base_limit = tmpl.row_limit or DEFAULT_REPORT_ROW_LIMIT
+    limit_arg = request.args.get("limit", type=int)
+    row_limit = base_limit if not limit_arg or limit_arg < 1 else limit_arg
+
     fmt = request.args.get("format")
-    rows = query.limit(1000).all()
+    rows = query.limit(row_limit).all()
 
     if fmt == "csv":
         buf = StringIO()
@@ -454,7 +496,7 @@ def run_report(template_id):
                 if f == "reistijd_calc":
                     v = _calc_value(f, r)
                 else:
-                    v = getattr(r, f, "")
+                    v = _format_value(f, r)
                 values.append('' if v is None else str(v))
             buf.write(",".join(values) + "\n")
         buf.seek(0)
@@ -479,7 +521,7 @@ def run_report(template_id):
                 if f == "reistijd_calc":
                     rowvals.append(_calc_value(f, r))
                 else:
-                    rowvals.append(getattr(r, f, None))
+                    rowvals.append(_format_value(f, r))
             ws.append(rowvals)
         out = BytesIO()
         wb.save(out)
@@ -501,6 +543,12 @@ def run_report(template_id):
         "reports_run.html",
         template=tmpl,
         fields=fields,
-        rows=[{"obj": r, "calc": {"reistijd_calc": _calc_value("reistijd_calc", r)}} for r in rows],
+        rows=[
+            {
+                "cols": {f: (_calc_value("reistijd_calc", r) if f == "reistijd_calc" else _format_value(f, r)) for f in fields},
+            }
+            for r in rows
+        ],
         filter_meta=filter_meta,
+        row_limit=row_limit,
     )

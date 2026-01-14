@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3>Data refresh</h3>
+    <p class="text-muted mb-0">Stel de dagelijkse automatische ingest van rgritten in.</p>
+  </div>
+  <a class="btn btn-secondary" href="{{ url_for('admin.dashboard') }}">Terug</a>
+</div>
+
+<form method="post" class="row g-3">
+  {{ form.hidden_tag() }}
+  <div class="col-12">
+    <div class="form-check">
+      {{ form.enabled(class="form-check-input", id="enabled") }}
+      <label class="form-check-label" for="enabled">Scheduler aan</label>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <label class="form-label" for="run_time">Dagelijks tijdstip (HH:MM)</label>
+    {{ form.run_time(class="form-control", id="run_time", placeholder="02:00") }}
+  </div>
+  <div class="col-md-4 col-sm-6">
+    <label class="form-label" for="profile_id">Profiel</label>
+    {{ form.profile_id(class="form-select", id="profile_id") }}
+    <div class="form-text">Kies het connectieprofiel dat gebruikt moet worden voor de ingest.</div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <label class="form-label" for="chunk_size">Chunk grootte</label>
+    {{ form.chunk_size(class="form-control", id="chunk_size", min="1") }}
+  </div>
+  <div class="col-md-4 col-sm-6">
+    <label class="form-label" for="min_ritdatum">Minimale ritdatum (optioneel)</label>
+    {{ form.min_ritdatum(class="form-control", id="min_ritdatum", placeholder="YYYY-MM-DD") }}
+    <div class="form-text">Laat leeg om alles te laden; vul een datum in om alleen nieuwe ritten op/na die datum te laden.</div>
+  </div>
+  <div class="col-12">
+    <button class="btn btn-primary">Opslaan</button>
+  </div>
+</form>
+{% endblock %}

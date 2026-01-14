@@ -59,6 +59,8 @@ flask diagnose-rgritten --profile Historie [--cursor 0] [--min-ritdatum YYYY-MM-
 flask debug-rgritten-cols --profile Historie
 ```
 - Remote SELECT uses `TRY_CONVERT` casts; Decimals cast to float before SQLite insert.
+- Opt-in daily refresh thread (inside the app process): configure via Beheer > Data refresh of stel env in bij eerste start (`DATA_REFRESH_ENABLED=1`, `DATA_REFRESH_TIME=HH:MM`, `DATA_REFRESH_PROFILE=Historie`, `DATA_REFRESH_CHUNK_SIZE=1000`, `DATA_REFRESH_MIN_RITDATUM=YYYY-MM-DD`). De scheduler draait één keer per proces; draai daarom geen meerdere workers met de interne scheduler aan.
+- Opt-in daily refresh thread (inside the app process): set `DATA_REFRESH_ENABLED=1`; optional overrides `DATA_REFRESH_TIME=HH:MM`, `DATA_REFRESH_PROFILE=Historie`, `DATA_REFRESH_CHUNK_SIZE=1000`, `DATA_REFRESH_MIN_RITDATUM=YYYY-MM-DD`. Avoid running multiple app worker processes when enabled.
 
 ## Recent Decisions / Changelog-lite
 - Added `RGRit` model and append-only sync pipeline (`rgritten_sync.py` + CLI commands).

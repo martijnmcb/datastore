@@ -209,3 +209,6 @@ __marimo__/
 # local runtime files
 instance/
 *.db
+*.db
+*.db-wal
+*.db-shm

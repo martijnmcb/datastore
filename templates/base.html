@@ -36,7 +36,7 @@
       </div>
     </nav>
 
-    <div class="container my-4">
+    <div class="{% block container_class %}container{% endblock %} my-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
           <div class="alert alert-{{ 'danger' if cat=='danger' else ('warning' if cat=='warning' else ('success' if cat=='success' else 'info')) }} alert-dismissible fade show" role="alert">

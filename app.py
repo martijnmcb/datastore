@@ -1,13 +1,94 @@
 import os
+import threading
+import time
+from datetime import datetime, timedelta
 import click
 from flask import Flask, redirect, url_for, request, abort
 from config import Config
 from extensions import db, login_manager, migrate
-from models import User, Role
+from models import User, Role, DataRefreshConfig, ConnectionProfile
 from blueprints.auth.routes import bp as auth_bp
 from blueprints.main.routes import bp as main_bp
 from blueprints.admin.routes import bp as admin_bp
 from blueprints.reports import bp as reports_bp
+
+
+def _seconds_until(timestr: str) -> float:
+    """Return seconds until next occurrence of HH:MM (local time)."""
+    now = datetime.now()
+    try:
+        hh, mm = [int(x) for x in timestr.split(":")[:2]]
+    except Exception:
+        return 3600.0
+    target = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+    if target <= now:
+        target += timedelta(days=1)
+    return (target - now).total_seconds()
+
+
+def _data_refresh_loop(app: Flask):
+    while True:
+        try:
+            with app.app_context():
+                cfg = db.session.get(DataRefreshConfig, 1)
+                if not cfg:
+                    cfg = DataRefreshConfig(id=1)
+                    db.session.add(cfg)
+                    db.session.commit()
+                if not cfg.enabled:
+                    time.sleep(300)
+                    continue
+
+                schedule = cfg.run_time or "02:00"
+                wait_s = _seconds_until(schedule)
+                time.sleep(wait_s)
+
+                # re-fetch in case it was changed while sleeping
+                cfg = db.session.get(DataRefreshConfig, 1)
+                if not cfg or not cfg.enabled:
+                    continue
+                profile = db.session.get(ConnectionProfile, cfg.profile_id) if cfg.profile_id else None
+                if not profile:
+                    app.logger.warning("Data refresh: geen profiel geselecteerd, sla over")
+                    time.sleep(300)
+                    continue
+
+                from rgritten_sync import sync_rgritten
+
+                stats = sync_rgritten(
+                    profile_name=profile.name,
+                    chunk_size=max(1, cfg.chunk_size or 1000),
+                    min_ritdatum=cfg.min_ritdatum,
+                )
+                app.logger.info(
+                    "Data refresh ok (%s %s): +%s (through %s/%s)",
+                    profile.project,
+                    profile.name,
+                    stats.get("inserted"),
+                    stats.get("through_ritdatum"),
+                    stats.get("through_ritnummer"),
+                )
+        except Exception:
+            app.logger.exception("Data refresh failed")
+            time.sleep(60)
+
+
+def _start_data_refresh(app: Flask):
+    # Avoid double-start in dev reloader
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+    if app.config.get("_data_refresh_started"):
+        return
+    app.config["_data_refresh_started"] = True
+    t = threading.Thread(target=_data_refresh_loop, args=(app,), daemon=True)
+    t.start()
+    app.logger.info(
+        "Data refresh scheduler started: profile=%s time=%s chunk=%s",
+        "db-config",
+        "db-config",
+        "db-config",
+    )
+
 
 def create_app():
     app = Flask(__name__)
@@ -22,6 +103,8 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(reports_bp)
+
+    _start_data_refresh(app)
 
     @app.route("/init")
     def init():

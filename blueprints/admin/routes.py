@@ -12,7 +12,7 @@ from wtforms import (
 from wtforms.validators import DataRequired, Email, Optional, Length
 from flask_login import login_required
 from extensions import db
-from models import User, Role, ConnectionSetting, ConnectionProfile, UserProject
+from models import User, Role, ConnectionSetting, ConnectionProfile, UserProject, DataRefreshConfig
 from role_required import role_required
 import sqlalchemy as sa
 
@@ -65,6 +65,14 @@ class ConnProfileForm(FlaskForm):
     password = PasswordField("DB Pass", validators=[Optional(), Length(min=0)])
     odbc_driver = StringField("ODBC Driver", default="ODBC Driver 17 for SQL Server", validators=[DataRequired()])
     trust_server_cert = BooleanField("Trust Server Certificate")
+
+
+class RefreshConfigForm(FlaskForm):
+    enabled = BooleanField("Scheduler aan")
+    run_time = StringField("Dagelijks tijdstip (HH:MM)", default="02:00", validators=[DataRequired()])
+    profile_id = SelectField("Profiel", choices=[], validators=[Optional()])
+    chunk_size = IntegerField("Chunk grootte", default=1000, validators=[DataRequired()])
+    min_ritdatum = StringField("Minimale ritdatum (YYYY-MM-DD)", validators=[Optional()])
 
 # ----- Views -----
 @bp.route("/")
@@ -314,6 +322,44 @@ def connection():
         sel_project=sel_project or (cp.project if cp else None),
         sel_id=(cp.id if cp else None),
         multi_profiles=True,
+    )
+
+
+@bp.route("/refresh", methods=["GET", "POST"])
+@login_required
+@role_required("Beheerder")
+def refresh_config():
+    cfg = db.session.get(DataRefreshConfig, 1)
+    if not cfg:
+        cfg = DataRefreshConfig(id=1)
+        db.session.add(cfg)
+        db.session.commit()
+
+    profiles = db.session.query(ConnectionProfile).order_by(ConnectionProfile.project, ConnectionProfile.name).all()
+    form = RefreshConfigForm()
+    form.profile_id.choices = [("", "- kies profiel -")] + [(str(p.id), f"{p.project} / {p.name}") for p in profiles]
+
+    if request.method == "POST" and form.validate_on_submit():
+        cfg.enabled = bool(form.enabled.data)
+        cfg.run_time = (form.run_time.data or "02:00").strip()
+        cfg.profile_id = int(form.profile_id.data) if form.profile_id.data else None
+        cfg.chunk_size = form.chunk_size.data or 1000
+        cfg.min_ritdatum = (form.min_ritdatum.data or "").strip() or None
+        db.session.commit()
+        flash("Data refresh instellingen opgeslagen", "success")
+        return redirect(url_for("admin.refresh_config"))
+
+    if request.method == "GET":
+        form.enabled.data = cfg.enabled
+        form.run_time.data = cfg.run_time or "02:00"
+        form.profile_id.data = str(cfg.profile_id) if cfg.profile_id else ""
+        form.chunk_size.data = cfg.chunk_size or 1000
+        form.min_ritdatum.data = cfg.min_ritdatum or ""
+
+    return render_template(
+        "admin_refresh.html",
+        form=form,
+        profiles=profiles,
     )
 
 @bp.route("/connection/test", methods=["POST"])

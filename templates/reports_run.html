@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block container_class %}container-fluid{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
   <div>
@@ -11,43 +12,30 @@
   </div>
 </div>
 
-{% if template.filter_fields %}
-<form class="row g-2 mb-3" method="get" action="{{ url_for('reports.run_report', template_id=template.id) }}">
-  {% for fdef in template.filter_fields %}
-    {% set fname = fdef.field if fdef is mapping else fdef %}
-    {% set has_saved = fdef.value is defined and fdef.value %}
-    {% if not has_saved %}
-      {% set kind = filter_meta.get(fname, 'text') %}
-      <div class="col-md-3">
-        <label class="form-label">{{ fname }}</label>
-      {% if kind == 'date' %}
-        <div class="d-flex gap-1">
-          <input class="form-control" type="date" name="rt_from_{{ fname }}" value="{{ request.args.get('rt_from_' ~ fname, '') }}" placeholder="Van">
-          <input class="form-control" type="date" name="rt_to_{{ fname }}" value="{{ request.args.get('rt_to_' ~ fname, '') }}" placeholder="Tot">
-        </div>
-      {% elif kind == 'time' %}
-        <div class="d-flex gap-1">
-          <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
-            {% set op = request.args.get('rt_op_' ~ fname, '=') %}
-            <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
-            <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
-            <option value=">" {% if op == '>' %}selected{% endif %}>&gt;</option>
-            <option value=">=" {% if op == '>=' %}selected{% endif %}>&ge;</option>
-            <option value="<" {% if op == '<' %}selected{% endif %}>&lt;</option>
-            <option value="<=" {% if op == '<=' %}selected{% endif %}>&le;</option>
-            <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
-            <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>is not null</option>
-          </select>
-          <input class="form-control" type="time" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
-        </div>
-      {% else %}
-        <div class="d-flex gap-1">
-          <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
-            {% set op = request.args.get('rt_op_' ~ fname, '=') %}
-            <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
+<form class="row g-2 mb-3 align-items-end" method="get" action="{{ url_for('reports.run_report', template_id=template.id) }}">
+  <div class="col-md-2 col-sm-4 col-6">
+    <label class="form-label">Max regels</label>
+    <input class="form-control" type="number" min="1" name="limit" value="{{ request.args.get('limit', row_limit) }}">
+  </div>
+  {% if template.filter_fields %}
+    {% for fdef in template.filter_fields %}
+      {% set fname = fdef.field if fdef is mapping else fdef %}
+      {% set has_saved = fdef.value is defined and fdef.value %}
+      {% if not has_saved %}
+        {% set kind = filter_meta.get(fname, 'text') %}
+        <div class="col-md-3">
+          <label class="form-label">{{ fname }}</label>
+        {% if kind == 'date' %}
+          <div class="d-flex gap-1">
+            <input class="form-control" type="date" name="rt_from_{{ fname }}" value="{{ request.args.get('rt_from_' ~ fname, '') }}" placeholder="Van">
+            <input class="form-control" type="date" name="rt_to_{{ fname }}" value="{{ request.args.get('rt_to_' ~ fname, '') }}" placeholder="Tot">
+          </div>
+        {% elif kind == 'time' %}
+          <div class="d-flex gap-1">
+            <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
+              {% set op = request.args.get('rt_op_' ~ fname, '=') %}
+              <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
               <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
-              <option value="like" {% if op == 'like' %}selected{% endif %}>like</option>
-              <option value="not_like" {% if op == 'not_like' %}selected{% endif %}>not like</option>
               <option value=">" {% if op == '>' %}selected{% endif %}>&gt;</option>
               <option value=">=" {% if op == '>=' %}selected{% endif %}>&ge;</option>
               <option value="<" {% if op == '<' %}selected{% endif %}>&lt;</option>
@@ -55,18 +43,35 @@
               <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
               <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>is not null</option>
             </select>
-            <input class="form-control" type="text" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
+            <input class="form-control" type="time" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
           </div>
-        {% endif %}
-      </div>
-    {% endif %}
-  {% endfor %}
+        {% else %}
+          <div class="d-flex gap-1">
+            <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
+              {% set op = request.args.get('rt_op_' ~ fname, '=') %}
+              <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
+                <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
+                <option value="like" {% if op == 'like' %}selected{% endif %}>like</option>
+                <option value="not_like" {% if op == 'not_like' %}selected{% endif %}>not like</option>
+                <option value=">" {% if op == '>' %}selected{% endif %}>&gt;</option>
+                <option value=">=" {% if op == '>=' %}selected{% endif %}>&ge;</option>
+                <option value="<" {% if op == '<' %}selected{% endif %}>&lt;</option>
+                <option value="<=" {% if op == '<=' %}selected{% endif %}>&le;</option>
+                <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
+                <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>not null</option>
+              </select>
+              <input class="form-control" type="text" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  {% endif %}
   <div class="col-12">
-    <button class="btn btn-primary">Filter</button>
+    <button class="btn btn-primary">Toepassen</button>
     <a class="btn btn-secondary" href="{{ url_for('reports.run_report', template_id=template.id) }}">Reset</a>
   </div>
 </form>
-{% endif %}
 
 <div class="table-responsive">
   <table class="table table-sm table-striped">
@@ -79,11 +84,7 @@
       {% for row in rows %}
       <tr>
         {% for f in fields %}
-          {% if f == 'reistijd_calc' %}
-            <td>{{ row.calc.reistijd_calc }}</td>
-          {% else %}
-            <td>{{ row.obj|attr(f) }}</td>
-          {% endif %}
+          <td>{{ row.cols[f] }}</td>
         {% endfor %}
       </tr>
       {% endfor %}

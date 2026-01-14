@@ -305,11 +305,24 @@ class RGRit(db.Model):
     loosmeldinglongitude = db.Column(db.Numeric(18, 10), nullable=True)
 
 
+class DataRefreshConfig(db.Model):
+    __tablename__ = "data_refresh_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, nullable=False, default=False)
+    run_time = db.Column(db.String(10), nullable=False, default="02:00")  # HH:MM
+    profile_id = db.Column(db.Integer, db.ForeignKey("connection_profiles.id"), nullable=True)
+    chunk_size = db.Column(db.Integer, nullable=False, default=1000)
+    min_ritdatum = db.Column(db.String(20), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class ReportTemplate(db.Model):
     __tablename__ = "report_templates"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
     dataset = db.Column(db.String(120), nullable=False, default="rgritten")
+    row_limit = db.Column(db.Integer, nullable=False, default=1000)
     include_fields = db.Column(db.JSON, nullable=False, default=list)
     filter_fields = db.Column(db.JSON, nullable=False, default=list)
     sort_fields = db.Column(db.JSON, nullable=False, default=list)  # list of {"field":..., "dir": "asc|desc"}
