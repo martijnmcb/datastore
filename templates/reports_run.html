@@ -9,13 +9,14 @@
   <div class="btn-group">
     <a class="btn btn-outline-primary" href="{{ url_for('reports.run_report', template_id=template.id, format='csv', **request.args) }}">Export CSV</a>
     <a class="btn btn-outline-primary" href="{{ url_for('reports.run_report', template_id=template.id, format='xlsx', **request.args) }}">Export XLSX</a>
+    <a class="btn btn-outline-primary" href="{{ url_for('reports.run_report', template_id=template.id, format='pdf', **request.args) }}">Export PDF</a>
   </div>
 </div>
 
-<form class="row g-2 mb-3 align-items-end" method="get" action="{{ url_for('reports.run_report', template_id=template.id) }}">
+<form class="row g-1 mb-3 align-items-end" method="get" action="{{ url_for('reports.run_report', template_id=template.id) }}">
   <div class="col-md-2 col-sm-4 col-6">
     <label class="form-label">Max regels</label>
-    <input class="form-control" type="number" min="1" name="limit" value="{{ request.args.get('limit', row_limit) }}">
+    <input class="form-control max-rows-input" type="number" min="1" name="limit" value="{{ request.args.get('limit', row_limit) }}">
   </div>
   {% if template.filter_fields %}
     {% for fdef in template.filter_fields %}
@@ -23,16 +24,16 @@
       {% set has_saved = fdef.value is defined and fdef.value %}
       {% if not has_saved %}
         {% set kind = filter_meta.get(fname, 'text') %}
-        <div class="col-md-3">
+        <div class="col-md-2">
           <label class="form-label">{{ fname }}</label>
         {% if kind == 'date' %}
           <div class="d-flex gap-1">
-            <input class="form-control" type="date" name="rt_from_{{ fname }}" value="{{ request.args.get('rt_from_' ~ fname, '') }}" placeholder="Van">
-            <input class="form-control" type="date" name="rt_to_{{ fname }}" value="{{ request.args.get('rt_to_' ~ fname, '') }}" placeholder="Tot">
+            <input class="form-control filter-input" type="date" name="rt_from_{{ fname }}" value="{{ request.args.get('rt_from_' ~ fname, '') }}" placeholder="Van">
+            <input class="form-control filter-input" type="date" name="rt_to_{{ fname }}" value="{{ request.args.get('rt_to_' ~ fname, '') }}" placeholder="Tot">
           </div>
         {% elif kind == 'time' %}
           <div class="d-flex gap-1">
-            <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
+            <select class="form-select form-select-sm op-select" name="rt_op_{{ fname }}">
               {% set op = request.args.get('rt_op_' ~ fname, '=') %}
               <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
               <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
@@ -43,11 +44,11 @@
               <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
               <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>is not null</option>
             </select>
-            <input class="form-control" type="time" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
+            <input class="form-control filter-input" type="time" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
           </div>
         {% else %}
           <div class="d-flex gap-1">
-            <select class="form-select form-select-sm" name="rt_op_{{ fname }}">
+            <select class="form-select form-select-sm op-select" name="rt_op_{{ fname }}">
               {% set op = request.args.get('rt_op_' ~ fname, '=') %}
               <option value="=" {% if op == '=' %}selected{% endif %}>=</option>
                 <option value="!=" {% if op == '!=' %}selected{% endif %}>&ne;</option>
@@ -60,7 +61,7 @@
                 <option value="is_null" {% if op == 'is_null' %}selected{% endif %}>is null</option>
                 <option value="not_null" {% if op == 'not_null' %}selected{% endif %}>not null</option>
               </select>
-              <input class="form-control" type="text" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
+              <input class="form-control filter-input" type="text" name="rt_val_{{ fname }}" value="{{ request.args.get('rt_val_' ~ fname, '') }}">
             </div>
           {% endif %}
         </div>
@@ -73,21 +74,41 @@
   </div>
 </form>
 
+<style>
+  .op-select { max-width: 10ch; }
+  .filter-input { max-width: 50%; }
+  .max-rows-input { max-width: 14ch; }
+</style>
+
 <div class="table-responsive">
   <table class="table table-sm table-striped">
     <thead>
       <tr>
-        {% for f in fields %}<th>{{ f }}</th>{% endfor %}
+        {% if pivot_enabled %}
+          {% for h in pivot_headers %}<th>{{ h }}</th>{% endfor %}
+        {% else %}
+          {% for f in fields %}<th>{{ f }}</th>{% endfor %}
+        {% endif %}
       </tr>
     </thead>
     <tbody>
-      {% for row in rows %}
-      <tr>
-        {% for f in fields %}
-          <td>{{ row.cols[f] }}</td>
+      {% if pivot_enabled %}
+        {% for prow in pivot_rows %}
+          <tr>
+            {% for cell in prow %}
+              <td>{{ cell }}</td>
+            {% endfor %}
+          </tr>
         {% endfor %}
-      </tr>
-      {% endfor %}
+      {% else %}
+        {% for row in rows %}
+        <tr>
+          {% for f in fields %}
+            <td>{{ row.cols[f] }}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      {% endif %}
     </tbody>
   </table>
 </div>

@@ -19,17 +19,22 @@
     <div class="form-text">Standaard 1000; zet hoger of lager voor andere exports.</div>
   </div>
 
-  <div class="d-flex gap-2 mb-2">
+  <div class="d-flex flex-wrap gap-2 mb-2 align-items-center">
     <button class="btn btn-sm btn-outline-secondary" type="button" id="btn-clear-all">Deselecteer alle velden</button>
     <button class="btn btn-sm btn-outline-secondary" type="button" id="btn-clear-sorts">Reset sortering</button>
+    <div class="form-check form-check-inline ms-2">
+      <input class="form-check-input" type="checkbox" id="toggle-selected-only">
+      <label class="form-check-label" for="toggle-selected-only">Alleen geselecteerd</label>
+    </div>
   </div>
 
   <div class="table-responsive">
-    <table class="table table-sm align-middle">
+    <table class="table table-sm align-middle report-table">
       <thead>
         <tr>
           <th>Veld</th>
           <th>Output</th>
+          <th>Volgorde</th>
           <th>Filter</th>
           <th>Group by</th>
           <th>Sort</th>
@@ -38,8 +43,26 @@
       <tbody>
         {% for f in fields %}
         <tr>
-          <td>{{ f }}</td>
+          <td>
+            <div class="field-name">{{ f }}</div>
+            <div class="mt-1 d-flex flex-wrap gap-1">
+              {% if f in include_set %}<span class="badge bg-primary-subtle text-primary">Output</span>{% endif %}
+              {% if f in filter_set %}<span class="badge bg-warning-subtle text-warning">Filter</span>{% endif %}
+              {% if f in group_set %}<span class="badge bg-info-subtle text-info">Group</span>{% endif %}
+              {% if sort_map.get(f) %}<span class="badge bg-success-subtle text-success">Sort {{ sort_map.get(f) }}</span>{% endif %}
+            </div>
+          </td>
           <td><input type="checkbox" name="include_{{ f }}" value="1" {% if f in include_set %}checked{% endif %}></td>
+          <td>
+            <input
+              type="number"
+              class="form-control form-control-sm order-input"
+              name="order_{{ f }}"
+              min="1"
+              value="{{ include_order_map.get(f, '') }}"
+              {% if f not in include_set %}disabled{% endif %}
+            >
+          </td>
           <td class="filter-cell" data-kind="{{ field_kinds.get(f) }}" data-field="{{ f }}">
             <input type="checkbox" name="filter_{{ f }}" value="1" {% if f in filter_set %}checked{% endif %}>
             <div class="mt-1">
@@ -89,25 +112,199 @@
     </table>
   </div>
 
+  <div class="card mt-3">
+    <div class="card-body">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="pivot-enabled" name="pivot_enabled" value="1" {% if pivot_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="pivot-enabled">Pivot inschakelen</label>
+      </div>
+      <div id="pivot-config" class="mt-3">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Rijen</label>
+            <select class="form-select" name="pivot_row_fields" multiple size="6">
+              {% for f in pivot_fields %}
+                <option value="{{ f }}" {% if f in pivot_row_fields %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">Meerdere rijen mogelijk.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Kolom</label>
+            <select class="form-select" name="pivot_col_field">
+              <option value="">-</option>
+              {% for f in pivot_fields %}
+                <option value="{{ f }}" {% if pivot_col_field == f %}selected{% endif %}>{{ f }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Waarden</label>
+            {% for i in range(3) %}
+              {% set vdef = pivot_values[i] if pivot_values|length > i else {} %}
+              <div class="d-flex gap-2 mb-2">
+                <select class="form-select form-select-sm pivot-value-field" name="pivot_value_field_{{ i + 1 }}" data-agg-target="pivot_value_agg_{{ i + 1 }}">
+                  <option value="">-</option>
+                  {% for f in pivot_fields %}
+                    <option value="{{ f }}" data-kind="{{ field_kinds.get(f) }}" {% if vdef.get('field') == f %}selected{% endif %}>{{ f }}</option>
+                  {% endfor %}
+                </select>
+                <select class="form-select form-select-sm pivot-value-agg" name="pivot_value_agg_{{ i + 1 }}">
+                  <option value="">-</option>
+                  {% for agg in pivot_aggs %}
+                    <option value="{{ agg }}" {% if vdef.get('agg') == agg %}selected{% endif %}>{{ agg }}</option>
+                  {% endfor %}
+                </select>
+                <input
+                  type="text"
+                  class="form-control form-control-sm"
+                  name="pivot_value_label_{{ i + 1 }}"
+                  value="{{ vdef.get('label', '') }}"
+                  placeholder="label"
+                >
+              </div>
+            {% endfor %}
+            <div class="form-text">count, sum, avg, min, max.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn btn-primary">Opslaan</button>
   <a class="btn btn-secondary" href="{{ url_for('reports.list_reports') }}">Annuleer</a>
 </form>
+
+<style>
+  .report-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #f8f9fa;
+  }
+  .report-table td,
+  .report-table th {
+    padding: 0.35rem 0.5rem;
+  }
+  .report-table tbody tr:nth-child(even) {
+    background: #fbfbfc;
+  }
+  .report-table tbody tr:hover {
+    background: #f2f6ff;
+  }
+  .field-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .report-table .badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .filter-op {
+    max-width: 10ch;
+  }
+  .order-input {
+    max-width: 8ch;
+  }
+</style>
 
 <script>
   (function(){
     const clearAllBtn = document.getElementById('btn-clear-all');
     const clearSortBtn = document.getElementById('btn-clear-sorts');
     function qsAll(sel){ return Array.prototype.slice.call(document.querySelectorAll(sel)); }
+    function syncOrderInputs(){
+      qsAll('input[name^="include_"]').forEach(cb => {
+        const row = cb.closest('tr');
+        const orderInput = row ? row.querySelector('.order-input') : null;
+        if (!orderInput) return;
+        orderInput.disabled = !cb.checked;
+        if (!cb.checked){
+          orderInput.value = '';
+        }
+      });
+    }
+    function isRowSelected(row){
+      if (!row) return false;
+      const include = row.querySelector('input[name^="include_"]');
+      const filter = row.querySelector('input[name^="filter_"]');
+      const group = row.querySelector('input[name^="group_"]');
+      const sort = row.querySelector('select[name^="sort_"]');
+      return (
+        (include && include.checked) ||
+        (filter && filter.checked) ||
+        (group && group.checked) ||
+        (sort && (sort.value === 'asc' || sort.value === 'desc'))
+      );
+    }
+    function applySelectedOnly(){
+      const toggle = document.getElementById('toggle-selected-only');
+      const enabled = toggle && toggle.checked;
+      qsAll('.report-table tbody tr').forEach(row => {
+        row.style.display = (!enabled || isRowSelected(row)) ? '' : 'none';
+      });
+    }
     if (clearAllBtn){
       clearAllBtn.addEventListener('click', function(){
         qsAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+        syncOrderInputs();
+        applySelectedOnly();
       });
     }
     if (clearSortBtn){
       clearSortBtn.addEventListener('click', function(){
         qsAll('select[name^=\"sort_\"]').forEach(sel => sel.value = '');
+        applySelectedOnly();
       });
     }
+    qsAll('input[name^="include_"]').forEach(cb => {
+      cb.addEventListener('change', syncOrderInputs);
+      cb.addEventListener('change', applySelectedOnly);
+    });
+    qsAll('input[name^="filter_"], input[name^="group_"], select[name^="sort_"]').forEach(el => {
+      el.addEventListener('change', applySelectedOnly);
+    });
+    const selectedOnlyToggle = document.getElementById('toggle-selected-only');
+    if (selectedOnlyToggle){
+      selectedOnlyToggle.addEventListener('change', applySelectedOnly);
+    }
+    const pivotToggle = document.getElementById('pivot-enabled');
+    const pivotConfig = document.getElementById('pivot-config');
+    function togglePivot(){
+      if (!pivotToggle || !pivotConfig) return;
+      const enabled = pivotToggle.checked;
+      pivotConfig.style.display = enabled ? '' : 'none';
+      pivotConfig.querySelectorAll('select').forEach(el => {
+        el.disabled = !enabled;
+      });
+    }
+    function syncPivotAggs(){
+      qsAll('.pivot-value-field').forEach(sel => {
+        const aggName = sel.dataset.aggTarget;
+        const aggSel = aggName ? document.querySelector(`select[name="${aggName}"]`) : null;
+        if (!aggSel) return;
+        const opt = sel.selectedOptions[0];
+        const kind = opt ? opt.dataset.kind : '';
+        Array.prototype.slice.call(aggSel.options).forEach(option => {
+          if (!option.value) return;
+          const isNumericAgg = option.value !== 'count';
+          option.disabled = kind && kind !== 'number' && isNumericAgg;
+        });
+        if (aggSel.selectedOptions[0] && aggSel.selectedOptions[0].disabled){
+          aggSel.value = '';
+        }
+      });
+    }
+    if (pivotToggle){
+      pivotToggle.addEventListener('change', togglePivot);
+    }
+    qsAll('.pivot-value-field').forEach(sel => {
+      sel.addEventListener('change', syncPivotAggs);
+    });
+    togglePivot();
+    syncPivotAggs();
+    applySelectedOnly();
   })();
 </script>
 {% endblock %}

@@ -327,4 +327,8 @@ class ReportTemplate(db.Model):
     filter_fields = db.Column(db.JSON, nullable=False, default=list)
     sort_fields = db.Column(db.JSON, nullable=False, default=list)  # list of {"field":..., "dir": "asc|desc"}
     group_fields = db.Column(db.JSON, nullable=False, default=list)
+    pivot_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    pivot_row_fields = db.Column(db.JSON, nullable=False, default=list)
+    pivot_col_field = db.Column(db.String(255), nullable=True)
+    pivot_values = db.Column(db.JSON, nullable=False, default=list)  # list of {"field":..., "agg": ...}
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)

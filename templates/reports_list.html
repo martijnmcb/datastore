@@ -25,6 +25,12 @@
         <td class="text-end">
           <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('reports.edit_report', template_id=t.id) }}">Bewerk</a>
           <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.run_report', template_id=t.id) }}">Run</a>
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.run_report', template_id=t.id, format='csv') }}">CSV</a>
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.run_report', template_id=t.id, format='xlsx') }}">XLSX</a>
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.run_report', template_id=t.id, format='pdf') }}">PDF</a>
+          <form class="d-inline" method="post" action="{{ url_for('reports.duplicate_report', template_id=t.id) }}">
+            <button class="btn btn-sm btn-outline-secondary" type="submit">Dupliceer</button>
+          </form>
         </td>
       </tr>
       {% endfor %}

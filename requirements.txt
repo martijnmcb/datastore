@@ -12,3 +12,4 @@ pytest
 gunicorn
 waitress
 openpyxl
+reportlab
